@@ -150,15 +150,15 @@ void setup() {
 }
 
 // loop method does the following:
-// 1) use parameter values to set PID controller values (done only once)
-// 2) recive position as well as orientation data continously
-//      2.1) position data (z-position and longitudinal velocity) is fed into a PID controller, which outputs a angle difference to the hard coded angle
+// 1) recive position, orientation data continously and parameter whenever received
+//      1.1) position data (z-position and longitudinal velocity) is fed into a PID controller, which outputs a angle difference to the hard coded angle
 //           -> This implicitly stabilizes the position of the bot
-//      2.2) position data (yaw angle) is fed into a PID controller, which outputs a pwm difference between the left and right motor
+//      1.2) position data (yaw angle) is fed into a PID controller, which outputs a pwm difference between the left and right motor
 //           -> This stabilizes the heading of the bot.
-//      2.3) orientation data (tilt angle and velocity) is also fed into a PID controller, which outputs a normalized pwm value
+//      1.3) orientation data (tilt angle and velocity) is also fed into a PID controller, which outputs a normalized pwm value
 //           -> This stabilizes the angle of the bot (and therefore the position)
-// 5) pwm values for the left and right motor and the direction are set as last step
+//      1.4) use parameter values to set motor offset, PID controller values and driving/rotation direction
+// 2) pwm values for the left and right motor and the direction are set as last step
 void loop() {
 
   //Wait for new frame to be fully received
@@ -324,8 +324,8 @@ float getFloatFrom3Bytes(const byte receivedBytes[], const byte offset) {
 // runPIDController - executes a PID controller. This implementation takes the derivate directly into account which improves performance in case you can measure it directly (avoids calculating the numerical derivative)
 // Input:
 // * desiredValue - value you want to achieve
-// * error - current error defined as desiredValue - currentValue
-// * currentValue - derivative of the value you currently do have
+// * error - current error defined as: desiredValue - currentValue
+// * currentValueDerivative - derivative of the current value (what you have measured)
 // * elapsedTime - elapsed time since last call in seconds
 // * controllerData - holds P,I and D parameters and other values from previous execution
 // Returns: new controller output
@@ -373,7 +373,7 @@ void updateCurrentDistance(float deltaTime) {
     g_currentDrivenDistance = g_receivedPositionData[1];
   }
 }
-// updateDesiredDistance - update the desired driven distance for the distance controller. While there is any movement input received, the z position stored and set as desired when movement is over. 
+// updateDesiredDistance - update the desired driven distance for the distance controller. While there is any movement input received, the z position is stored and set as desired when movement is over.
 // While driving, a defined speed is used to increment the desired position accordingly
 // Input:
 // * deltaTime - time between two successive calls
