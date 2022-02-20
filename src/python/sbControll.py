@@ -9,10 +9,12 @@ import os
 import threading
 import errno
 import math
+import time
 
 # General config / constants
-SEND_IP = "192.168.0.0"  # Change to your phone's ip
-RECEIVE_IP = "192.168.0.0"  # Change to your pc's ip
+# SEND_IP = "192.168.0.136"  # Change to your phone's ip
+SEND_IP = "192.168.0.59"  # Change to your phone's ip
+RECEIVE_IP = "192.168.0.220"  # Change to your pc's ip
 UDP_PORT = 8888  # (Default) Only change to the port configured inside the app
 MESSAGE_LENGTH = 13  # data frame has 13 bytes
 NO_QUANTIZATION = 1
@@ -26,7 +28,8 @@ MIN_DATA_INDEX = 1
 MIN_DATA_VALUE = 0
 MAX_DATA_VALUE = 255
 PLOT_UPDATE_IN_MS = 10  # Update rate of animation
-DATA_STORAGE_IN_MS = 120000  # Last x ms which are shown in the plot
+DATA_STORAGE_POS_IN_MS = 120000  # Last x ms which are shown in the plot
+DATA_STORAGE_VEL_IN_MS = 10000  # Last x ms which are shown in the plot
 POSITION_SENSOR_ID = 101
 PARAMETER_SENSOR_ID = 103
 
@@ -83,16 +86,25 @@ mainSocket.setblocking(False)
 mainSocket.bind((RECEIVE_IP, UDP_PORT))
 sendQueue = deque(outputData, maxlen=1)
 # Prepare Plots
-fig, ax = plt.subplots()
-ax.ticklabel_format(useOffset=False)
-ax.set_ylabel('Position z in m')
-ax.set_xlabel('Position x in m')
-ax.set_xlim(2, -2)
-ax.set_ylim(-2, 2)
-maxDataLength = DATA_STORAGE_IN_MS // (PLOT_UPDATE_IN_MS)
+fig, (axPos, axVel) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [4, 1]})
+axPos.ticklabel_format(useOffset=False)
+axPos.set_ylabel('Position z in m')
+axPos.set_xlabel('Position x in m')
+axPos.set_xlim(2, -2)
+axPos.set_ylim(-2, 2)
+axVel.ticklabel_format(useOffset=False)
+axVel.set_ylabel('Velocity in m/s')
+axVel.set_xlabel('Time in ms')
+axis = [axVel, axPos]
+maxDataLengthPos = DATA_STORAGE_POS_IN_MS // (PLOT_UPDATE_IN_MS)
+maxDataLengthVel = DATA_STORAGE_VEL_IN_MS // (PLOT_UPDATE_IN_MS)
 lastReceivedPositionData = deque([bytes(MESSAGE_LENGTH)], maxlen=1)
-plotData = deque([(0, 0)], maxlen=maxDataLength)
-line = plt.plot(*zip(*plotData), c='black')[0]
+plotDataPos = deque([(0, 0)], maxlen=maxDataLengthPos)
+plotDataVel = deque([(0, 0)], maxlen=maxDataLengthVel)
+linePosition = axPos.plot(*zip(*plotDataPos), c='black')[0]
+lineVelocity = axVel.plot(*zip(*plotDataVel), c='blue')[0]
+lines = [linePosition, lineVelocity]
+startTime = None
 
 # Key stuff
 
@@ -243,7 +255,7 @@ threadKey.start()
 
 
 def receiveAndSend():
-    global updateParameterData, outputData
+    global updateParameterData, outputData, startTime
     while True:
         # When either mainSocket has data or rSock has data, select.select will return
         rlist, _, _ = select.select([mainSocket, rSock], [], [])
@@ -256,6 +268,8 @@ def receiveAndSend():
                         data, fromAddr = mainSocket.recvfrom(MESSAGE_LENGTH)
                         if data[0] == POSITION_SENSOR_ID:
                             lastReceivedPositionData.append(data)
+                            if startTime is None:
+                                startTime = getCurrentTimeInMS()
                         elif data[0] == PARAMETER_SENSOR_ID and updateParameterData:
                             updateParameterData = False
                             outputData = bytearray(data)
@@ -283,7 +297,12 @@ def getFloatFrom3Bytes(lastReceivedPositionData, offset):
     return val / float(65536)
 
 
+def getCurrentTimeInMS():
+    return (time.time_ns() + 500000) // 1000000
+
+
 def update(frame):
+    global startTime
     localPositionX = getFloatFrom3Bytes(lastReceivedPositionData[0], 0)
     localPositionZ = getFloatFrom3Bytes(lastReceivedPositionData[0], 3)
     longVelocity = getFloatFrom3Bytes(lastReceivedPositionData[0], 6)
@@ -292,11 +311,17 @@ def update(frame):
         math.sin(heading)*localPositionZ
     globalPositionZ = math.sin(heading)*localPositionX + \
         math.cos(heading)*localPositionZ
-    plotData.append((globalPositionX, globalPositionZ))
-    line.set_data(*zip(*plotData))
-    ax.relim()
-    ax.autoscale_view(True, True, True)
-    return line,
+    plotDataPos.append((globalPositionX, globalPositionZ))
+    deltaTime = 0
+    if startTime is not None:
+        deltaTime = getCurrentTimeInMS() - startTime
+    plotDataVel.append((deltaTime, longVelocity))
+    lines[0].set_data(*zip(*plotDataPos))
+    lines[1].set_data(*zip(*plotDataVel))
+    for ax in axis:
+        ax.relim()
+        ax.autoscale_view(True, True, True)
+    return lines,
 
 
 ani = animation.FuncAnimation(
