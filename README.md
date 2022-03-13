@@ -2,6 +2,7 @@
 World's first visual odometry stabilized self balance robot!
 
 What you'll get:
+
 [![Preview](http://img.youtube.com/vi/DK2eS_DkTyM/0.jpg)](https://www.youtube.com/watch?v=DK2eS_DkTyM "A boring line follower")
 
 ## How to get started
