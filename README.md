@@ -1,4 +1,7 @@
+<img align="left" width="50" height="100" src="https://github.com/SerialSensor/ProjMedia/blob/master/appIcon.png" alt="WTF">
+
 # Visual Odometry Self Balance Bot
+
 World's first visual odometry stabilized self balance robot!
 
 What you'll get:
