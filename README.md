@@ -2,9 +2,8 @@
 World's first visual odometry stabilized self balance robot!
 
 What you'll get:
+[![Preview](http://img.youtube.com/vi/DK2eS_DkTyM/0.jpg)](https://www.youtube.com/watch?v=DK2eS_DkTyM "A boring line follower")
 
-Put video link here
-  
 ## How to get started
 - [Get the App](#get-the-app)
 - [How to build the bot](#how-to-build-the-bot)
@@ -54,5 +53,6 @@ Now you can run the script, start the app and start sending (play button). Press
 * The tilt angle of the phone is automatically accounted for, nothing to do here.
 
 ## Troubleshooting
-When using a camera based sensor, always make sure that there is nothing of the bot visible to the camera!
-For other problems, check the app internal help.
+* When using a camera based sensor, always make sure that there is nothing of the bot visible to the camera!
+* Remove Serial Sensor from battery optimizations inside the Android settings
+* For other problems, check the app internal help.
